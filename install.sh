@@ -34,6 +34,9 @@ make -C /lib/modules/"$KVERSION"/build M="$PWD" modules
 echo "Installing to $MODDIR"
 mkdir -p "$MODDIR"
 cp -v acer_ec_core.ko acer_fanctl.ko "$MODDIR/"
+if [ -f acer_ec_debug.ko ]; then
+    cp -v acer_ec_debug.ko "$MODDIR/"
+fi
 depmod -a
 
 # ---- 4. Modprobe config ----
@@ -51,6 +54,20 @@ acer_ec_core
 acer_fanctl
 CONF
 echo "Wrote $LOAD_D/acer-ec.conf"
+
+# ---- 5b. DKMS registration (if available) ----
+if command -v dkms &>/dev/null; then
+    if [ ! -d "/var/lib/dkms/acer-ec" ]; then
+        echo "Registering with DKMS..."
+        dkms add "$PWD" 2>/dev/null || true
+        dkms install acer-ec/0.1 2>/dev/null || true
+        echo "DKMS registered — modules will auto-rebuild on kernel updates"
+    else
+        echo "DKMS already registered — skipping"
+    fi
+else
+    echo "DKMS not found — modules won't auto-rebuild after kernel updates"
+fi
 
 # ---- 6b. Install CLI ----
 cp -v src/acer-ec.sh /usr/local/bin/acer-ec

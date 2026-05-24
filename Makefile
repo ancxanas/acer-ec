@@ -4,6 +4,9 @@ acer_ec_core-objs := src/acer_ec_core.o
 obj-m += acer_fanctl.o
 acer_fanctl-objs := src/acer_fanctl.o
 
+obj-m += acer_ec_debug.o
+acer_ec_debug-objs := src/acer_ec_debug.o
+
 ccflags-y := -I$(src)/src
 
 all:

@@ -14,7 +14,7 @@ static struct kobject *fan_kobj;
 
 static inline u16 raw_to_rpm(u16 raw)
 {
-	if (raw == 0)
+	if (raw == 0 || raw > 60000)
 		return 0;
 	return 60000000U / raw;
 }
