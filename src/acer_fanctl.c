@@ -6,11 +6,15 @@
 #include <linux/init.h>
 #include <linux/sysfs.h>
 #include <linux/kobject.h>
+#include <linux/hwmon.h>
+#include <linux/hwmon-sysfs.h>
+#include <linux/err.h>
 #include "acer_ec_core.h"
 
 #define DRV_NAME "acer_fanctl"
 
 static struct kobject *fan_kobj;
+static struct device *hwmon_dev;
 
 static inline u16 raw_to_rpm(u16 raw)
 {
@@ -165,6 +169,42 @@ static struct attribute_group attr_group = {
 	.attrs = attrs,
 };
 
+/* --- hwmon interface (lm_sensors) --- */
+static ssize_t acer_hwmon_val_show(struct device *dev,
+				   struct device_attribute *attr, char *buf)
+{
+	long val = 0;
+
+	if (strcmp(attr->attr.name, "temp1_input") == 0)
+		val = ec_core_read8(0x07) * 1000;
+	else if (strcmp(attr->attr.name, "fan1_input") == 0)
+		val = raw_to_rpm(ec_core_read16(0xD0));
+	else if (strcmp(attr->attr.name, "fan2_input") == 0)
+		val = raw_to_rpm(ec_core_read16(0xD2));
+
+	return sprintf(buf, "%ld\n", val);
+}
+
+static SENSOR_DEVICE_ATTR_RO(temp1_input, acer_hwmon_val, 0);
+static SENSOR_DEVICE_ATTR_RO(fan1_input, acer_hwmon_val, 0);
+static SENSOR_DEVICE_ATTR_RO(fan2_input, acer_hwmon_val, 0);
+
+static struct attribute *acer_hwmon_attrs[] = {
+	&sensor_dev_attr_temp1_input.dev_attr.attr,
+	&sensor_dev_attr_fan1_input.dev_attr.attr,
+	&sensor_dev_attr_fan2_input.dev_attr.attr,
+	NULL
+};
+
+static const struct attribute_group acer_hwmon_group = {
+	.attrs = acer_hwmon_attrs,
+};
+
+static const struct attribute_group *acer_hwmon_groups[] = {
+	&acer_hwmon_group,
+	NULL
+};
+
 static int profile_param = 2;
 module_param(profile_param, int, 0444);
 MODULE_PARM_DESC(profile_param, "Default fan profile (1=quiet 2=balanced 3=performance 4=gaming)");
@@ -186,12 +226,22 @@ static int __init acer_fanctl_init(void)
 	if (profile_param >= 1 && profile_param <= 4)
 		ec_core_scmd(0x69, BIT(profile_param - 1), 0, 0, 0);
 
+	hwmon_dev = hwmon_device_register_with_groups(NULL, "acer_ec",
+						      NULL, acer_hwmon_groups);
+	if (IS_ERR(hwmon_dev)) {
+		pr_warn("hwmon registration failed (%ld), sensors won't see it\n",
+			PTR_ERR(hwmon_dev));
+		hwmon_dev = NULL;
+	}
+
 	pr_info("loaded (profile=%d) - see /sys/kernel/acer_fanctl/\n", profile_param);
 	return 0;
 }
 
 static void __exit acer_fanctl_exit(void)
 {
+	if (hwmon_dev)
+		hwmon_device_unregister(hwmon_dev);
 	sysfs_remove_group(fan_kobj, &attr_group);
 	kobject_put(fan_kobj);
 	pr_info("unloaded\n");

@@ -73,6 +73,16 @@ fi
 cp -v src/acer-ec.sh /usr/local/bin/acer-ec
 chmod +x /usr/local/bin/acer-ec
 
+# ---- 5c. lm_sensors config ----
+mkdir -p /etc/sensors.d
+cat > /etc/sensors.d/acer-ec.conf <<'CONF'
+chip "acer_ec-*"
+    label temp1 "EC Temp"
+    label fan1 "CPU Fan"
+    label fan2 "GPU Fan"
+CONF
+echo "Wrote /etc/sensors.d/acer-ec.conf"
+
 # ---- 6. Load ----
 echo "Loading modules..."
 modprobe acer_ec_core
