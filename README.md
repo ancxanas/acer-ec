@@ -125,6 +125,20 @@ acer-ec/
 - **RPM values** are converted from raw tachometer periods. Formula:
   `RPM = 60,000,000 / raw`. Raw values ~40000 → ~1500 RPM.
 
+## CLI
+
+The `install.sh` script copies a `acer-ec` command to `/usr/local/bin`:
+
+```bash
+acer-ec                    # show status (default)
+acer-ec status             # pretty-print fan/temp values
+acer-ec profile            # show profile help
+acer-ec profile gaming     # set profile by name
+acer-ec profile 4          # set profile by number
+```
+
+Profile names: `quiet` (1), `balanced` (2), `performance` (3), `gaming` (4).
+
 ## License
 
 GNU General Public License v2.0 — see [LICENSE](LICENSE).

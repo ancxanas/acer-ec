@@ -52,6 +52,10 @@ acer_fanctl
 CONF
 echo "Wrote $LOAD_D/acer-ec.conf"
 
+# ---- 6b. Install CLI ----
+cp -v src/acer-ec.sh /usr/local/bin/acer-ec
+chmod +x /usr/local/bin/acer-ec
+
 # ---- 6. Load ----
 echo "Loading modules..."
 modprobe acer_ec_core
